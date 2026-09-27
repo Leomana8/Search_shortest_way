@@ -1,11 +1,11 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Search_minimum_way;
-using System;
+using System.Drawing;
 
 namespace TestField
 {
     /// <summary>
-    /// Модульные тесты класса Field и метода Way.PaveWay.
+    /// Модульные тесты класса Field и метода PathFinder.FindPath.
     /// Доступ к internal-типам основного проекта — через InternalsVisibleTo.
     /// </summary>
     [TestClass]
@@ -14,7 +14,7 @@ namespace TestField
         [TestMethod]
         public void Constructor_SetsDimensions()
         {
-            Field f = new Field(5, 4, 10, 20, 0, 0);
+            Field f = new Field(5, 4, 10, 20);
             Assert.AreEqual(5, f.GetLength(0));
             Assert.AreEqual(4, f.GetLength(1));
         }
@@ -22,15 +22,15 @@ namespace TestField
         [TestMethod]
         public void Constructor_BorderIsWall_InteriorIsFreeWay()
         {
-            Field f = new Field(5, 5, 1, 1, 0, 0);
+            Field f = new Field(5, 5, 1, 1);
             for (int i = 0; i < 5; i++)
             {
                 for (int j = 0; j < 5; j++)
                 {
-                    Type_obj expected = (i == 0 || j == 0 || i == 4 || j == 4)
-                        ? Type_obj.Wall
-                        : Type_obj.FreeWay;
-                    Assert.AreEqual(expected, f[i, j].Obj, "клетка [" + i + "," + j + "]");
+                    CellType expected = (i == 0 || j == 0 || i == 4 || j == 4)
+                        ? CellType.Wall
+                        : CellType.FreeWay;
+                    Assert.AreEqual(expected, f[i, j].Type, "клетка [" + i + "," + j + "]");
                 }
             }
         }
@@ -38,38 +38,38 @@ namespace TestField
         [TestMethod]
         public void Indexer_SetGetCell()
         {
-            Field f = new Field(5, 5, 1, 1, 0, 0);
-            f[2, 2].Obj = Type_obj.Start;
-            Assert.AreEqual(Type_obj.Start, f[2, 2].Obj);
+            Field f = new Field(5, 5, 1, 1);
+            f[2, 2].Type = CellType.Start;
+            Assert.AreEqual(CellType.Start, f[2, 2].Type);
         }
 
         [TestMethod]
-        [ExpectedException(typeof(IndexOutOfRangeException))]
         public void Indexer_ThrowsWhenCellOutsideField()
         {
-            Field f = new Field(5, 5, 1, 1, 0, 0);
-            var tmp = f[5, 0]; // индекс за последней допустимой границей
+            Field f = new Field(5, 5, 1, 1);
+            // индекс за последней допустимой границей
+            Assert.ThrowsExactly<IndexOutOfRangeException>(() => _ = f[5, 0]);
         }
 
         [TestMethod]
-        public void PaveWay_FindsShortestPath()
+        public void FindPath_FindsShortestPath()
         {
-            Way w = new Way(10, 10, 40, 40, 0, 0);
-            w[1, 1].Obj = Type_obj.Start;
-            w[3, 3].Obj = Type_obj.Finish;
+            Field f = new Field(10, 10, 40, 40);
+            f[1, 1].Type = CellType.Start;
+            f[3, 3].Type = CellType.Finish;
 
-            var path = w.PaveWay();
+            var path = PathFinder.FindPath(f);
             Assert.IsNotNull(path, "путь должен быть найден");
 
             // маршрут начинается на старте и заканчивается на финише
-            CollectionAssert.AreEqual(new[] { 1, 1 }, path[0]);
-            CollectionAssert.AreEqual(new[] { 3, 3 }, path[path.Count - 1]);
+            Assert.AreEqual(new Point(1, 1), path[0]);
+            Assert.AreEqual(new Point(3, 3), path[path.Count - 1]);
 
             // соседние клетки маршрута стоят вплотную (без прыжков по диагонали)
             for (int i = 1; i < path.Count; i++)
             {
-                int step = Math.Abs(path[i][0] - path[i - 1][0])
-                         + Math.Abs(path[i][1] - path[i - 1][1]);
+                int step = Math.Abs(path[i].X - path[i - 1].X)
+                         + Math.Abs(path[i].Y - path[i - 1].Y);
                 Assert.AreEqual(1, step, "шаг " + i);
             }
 
@@ -78,16 +78,16 @@ namespace TestField
         }
 
         [TestMethod]
-        public void PaveWay_ReturnsNullWhenNoPath()
+        public void FindPath_ReturnsNullWhenNoPath()
         {
-            Way w = new Way(10, 10, 40, 40, 0, 0);
-            w[1, 1].Obj = Type_obj.Start;
-            w[3, 3].Obj = Type_obj.Finish;
+            Field f = new Field(10, 10, 40, 40);
+            f[1, 1].Type = CellType.Start;
+            f[3, 3].Type = CellType.Finish;
             // закрываем единственный выход от старта (остальные границы — уже стены)
-            w[2, 1].Obj = Type_obj.Wall;
-            w[1, 2].Obj = Type_obj.Wall;
+            f[2, 1].Type = CellType.Wall;
+            f[1, 2].Type = CellType.Wall;
 
-            Assert.IsNull(w.PaveWay(), "пути быть не должно");
+            Assert.IsNull(PathFinder.FindPath(f), "пути быть не должно");
         }
     }
 }
