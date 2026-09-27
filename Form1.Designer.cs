@@ -34,6 +34,7 @@
             this.B_Wall = new System.Windows.Forms.Button();
             this.CoordinatesLabel = new System.Windows.Forms.Label();
             this.B_Go = new System.Windows.Forms.Button();
+            this.B_Clear = new System.Windows.Forms.Button();
             this.SuspendLayout();
             //
             // B_Delete
@@ -110,17 +111,32 @@
             this.B_Go.UseVisualStyleBackColor = true;
             this.B_Go.Click += new System.EventHandler(this.B_Go_Click);
             //
+            // B_Clear
+            //
+            this.B_Clear.BackColor = System.Drawing.Color.OrangeRed;
+            this.B_Clear.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(204)));
+            this.B_Clear.ForeColor = System.Drawing.Color.White;
+            this.B_Clear.Location = new System.Drawing.Point(485, 360);
+            this.B_Clear.Name = "B_Clear";
+            this.B_Clear.Size = new System.Drawing.Size(116, 38);
+            this.B_Clear.TabIndex = 6;
+            this.B_Clear.Text = "Очистить всё";
+            this.B_Clear.UseVisualStyleBackColor = false;
+            this.B_Clear.Click += new System.EventHandler(this.B_Clear_Click);
+            //
             // Form1
             //
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(645, 492);
+            this.Controls.Add(this.B_Clear);
             this.Controls.Add(this.B_Go);
             this.Controls.Add(this.CoordinatesLabel);
             this.Controls.Add(this.B_Delete);
             this.Controls.Add(this.B_Finish);
             this.Controls.Add(this.B_Start);
             this.Controls.Add(this.B_Wall);
+            this.KeyPreview = true;
             this.Name = "Form1";
             this.Text = "Поиск кратчайшего пути";
             this.MouseClick += new System.Windows.Forms.MouseEventHandler(this.Form1_MouseClick);
@@ -137,5 +153,6 @@
         private System.Windows.Forms.Button B_Delete;
         private System.Windows.Forms.Label CoordinatesLabel;
         private System.Windows.Forms.Button B_Go;
+        private System.Windows.Forms.Button B_Clear;
     }
 }

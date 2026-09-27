@@ -6,8 +6,10 @@ public partial class Form1 : Form
     private enum Tool { None, Wall, Start, Finish, Erase }
 
     private const int CellSizePx = 40;
+    private const int FieldWidth = 10;
+    private const int FieldHeight = 10;
 
-    private readonly Field _field = new(10, 10, CellSizePx, CellSizePx);
+    private readonly Field _field = new(FieldWidth, FieldHeight, CellSizePx, CellSizePx);
 
     private readonly Image _imgEmpty = Properties.Resources.Empty_Cells;
     private readonly Image _imgWall = Properties.Resources.Wall;
@@ -33,6 +35,7 @@ public partial class Form1 : Form
         _trailRight = Rotated(_trailUp, RotateFlipType.Rotate90FlipNone);
         _trailDown = Rotated(_trailUp, RotateFlipType.Rotate180FlipNone);
         _trailLeft = Rotated(_trailUp, RotateFlipType.Rotate270FlipNone);
+        UpdateButtons();
     }
 
     protected override void OnPaint(PaintEventArgs e)
@@ -119,8 +122,9 @@ public partial class Form1 : Form
 
     private void Form1_MouseClick(object sender, MouseEventArgs e)
     {
-        int x = (e.Location.X - CellSizePx) / CellSizePx;
-        int y = (e.Location.Y - CellSizePx) / CellSizePx;
+        Point cellCoord = GetCellFromMouse(e.Location);
+        int x = cellCoord.X;
+        int y = cellCoord.Y;
         CoordinatesLabel.Text = $"{x} {y}";
 
         // клики по стене-рамке и за пределами поля игнорируем
@@ -147,6 +151,37 @@ public partial class Form1 : Form
         }
 
         _path = null; // старый путь больше не актуален
+        UpdateButtons();
+        Invalidate();
+    }
+
+    /// <summary>
+    /// Преобразует координаты мыши в координаты клетки поля.
+    /// </summary>
+    private Point GetCellFromMouse(Point location)
+    {
+        int x = (location.X - CellSizePx) / CellSizePx;
+        int y = (location.Y - CellSizePx) / CellSizePx;
+        return new Point(x, y);
+    }
+
+    /// <summary>
+    /// Очищает всё поле, включая старт и финиш.
+    /// </summary>
+    private void ClearField()
+    {
+        for (int x = 1; x < _field.GetLength(0) - 1; x++)
+        {
+            for (int y = 1; y < _field.GetLength(1) - 1; y++)
+            {
+                Cell cell = _field[x, y];
+                if (cell.Type == CellType.Start) _startPlaced = false;
+                if (cell.Type == CellType.Finish) _finishPlaced = false;
+                cell.Type = CellType.FreeWay;
+            }
+        }
+        _path = null;
+        _pathProgress = 0;
         UpdateButtons();
         Invalidate();
     }
@@ -188,10 +223,39 @@ public partial class Form1 : Form
                 Invalidate();
                 await Task.Delay(100);
             }
+            // показываем длину пути после завершения анимации
+            MessageBox.Show($"Путь найден! Длина: {path.Count - 1} шагов", "Результат", 
+                MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
         finally
         {
             B_Go.Enabled = true;
         }
     }
+
+    protected override void OnKeyDown(KeyEventArgs e)
+    {
+        base.OnKeyDown(e);
+        switch (e.KeyCode)
+        {
+            case Keys.W:
+                SetTool(Tool.Wall);
+                break;
+            case Keys.S:
+                SetTool(Tool.Start);
+                break;
+            case Keys.F:
+                SetTool(Tool.Finish);
+                break;
+            case Keys.E:
+                SetTool(Tool.Erase);
+                break;
+            case Keys.Delete:
+            case Keys.C:
+                ClearField();
+                break;
+        }
+    }
+
+    private void B_Clear_Click(object sender, EventArgs e) => ClearField();
 }

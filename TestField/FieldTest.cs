@@ -89,5 +89,91 @@ namespace TestField
 
             Assert.IsNull(PathFinder.FindPath(f), "пути быть не должно");
         }
+
+        [TestMethod]
+        public void FindPath_StartAndFinishAtSameCell_ReturnsNull()
+        {
+            Field f = new Field(10, 10, 40, 40);
+            f[5, 5].Type = CellType.Start;
+            // финиш не установлен
+
+            Assert.IsNull(PathFinder.FindPath(f), "пути быть не должно без финиша");
+        }
+
+        [TestMethod]
+        public void FindPath_WithObstacles_FindsShortestPath()
+        {
+            Field f = new Field(10, 10, 40, 40);
+            f[1, 1].Type = CellType.Start;
+            f[8, 8].Type = CellType.Finish;
+
+            // создаём препятствия в виде стены посередине
+            for (int i = 3; i <= 7; i++)
+            {
+                f[i, 5].Type = CellType.Wall;
+            }
+
+            var path = PathFinder.FindPath(f);
+            Assert.IsNotNull(path, "путь должен быть найден вокруг препятствия");
+            Assert.AreEqual(new Point(1, 1), path[0]);
+            Assert.AreEqual(new Point(8, 8), path[path.Count - 1]);
+
+            // проверяем что все клетки пути не являются стенами
+            foreach (var point in path)
+            {
+                Assert.AreNotEqual(CellType.Wall, f[point.X, point.Y].Type, 
+                    $"путь не должен проходить через стену на [{point.X},{point.Y}]");
+            }
+        }
+
+        [TestMethod]
+        public void FindPath_ComplexMaze_FindsPath()
+        {
+            Field f = new Field(10, 10, 40, 40);
+            f[1, 1].Type = CellType.Start;
+            f[8, 8].Type = CellType.Finish;
+
+            // создаём сложный лабиринт
+            for (int i = 2; i < 8; i++)
+            {
+                f[i, 2].Type = CellType.Wall;
+                f[i, 4].Type = CellType.Wall;
+                f[i, 6].Type = CellType.Wall;
+            }
+            // оставляем проходы
+            f[3, 2].Type = CellType.FreeWay;
+            f[6, 4].Type = CellType.FreeWay;
+            f[2, 6].Type = CellType.FreeWay;
+
+            var path = PathFinder.FindPath(f);
+            Assert.IsNotNull(path, "путь должен быть найден в лабиринте");
+        }
+
+        [TestMethod]
+        public void FindPath_StraightLine_NoObstacles()
+        {
+            Field f = new Field(10, 10, 40, 40);
+            f[1, 5].Type = CellType.Start;
+            f[8, 5].Type = CellType.Finish;
+
+            var path = PathFinder.FindPath(f);
+            Assert.IsNotNull(path);
+            Assert.AreEqual(8, path.Count); // 8 клеток по прямой
+            Assert.AreEqual(new Point(1, 5), path[0]);
+            Assert.AreEqual(new Point(8, 5), path[path.Count - 1]);
+        }
+
+        [TestMethod]
+        public void FindPath_StartAdjacentToFinish()
+        {
+            Field f = new Field(10, 10, 40, 40);
+            f[5, 5].Type = CellType.Start;
+            f[5, 6].Type = CellType.Finish;
+
+            var path = PathFinder.FindPath(f);
+            Assert.IsNotNull(path);
+            Assert.AreEqual(2, path.Count); // всего 2 клетки
+            Assert.AreEqual(1, path.Count - 1); // 1 шаг
+        }
     }
 }
