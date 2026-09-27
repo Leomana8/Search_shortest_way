@@ -1,112 +1,93 @@
-﻿using Search_minimum_way;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Search_minimum_way;
 using System;
 
 namespace TestField
 {
-    
-    
     /// <summary>
-    ///Это класс теста для FieldTest, в котором должны
-    ///находиться все модульные тесты FieldTest
-    ///</summary>
-    [TestClass()]
+    /// Модульные тесты класса Field и метода Way.PaveWay.
+    /// Доступ к internal-типам основного проекта — через InternalsVisibleTo.
+    /// </summary>
+    [TestClass]
     public class FieldTest
     {
-
-
-        private TestContext testContextInstance;
-
-        /// <summary>
-        ///Получает или устанавливает контекст теста, в котором предоставляются
-        ///сведения о текущем тестовом запуске и обеспечивается его функциональность.
-        ///</summary>
-        public TestContext TestContext
+        [TestMethod]
+        public void Constructor_SetsDimensions()
         {
-            get
+            Field f = new Field(5, 4, 10, 20, 0, 0);
+            Assert.AreEqual(5, f.GetLength(0));
+            Assert.AreEqual(4, f.GetLength(1));
+        }
+
+        [TestMethod]
+        public void Constructor_BorderIsWall_InteriorIsFreeWay()
+        {
+            Field f = new Field(5, 5, 1, 1, 0, 0);
+            for (int i = 0; i < 5; i++)
             {
-                return testContextInstance;
+                for (int j = 0; j < 5; j++)
+                {
+                    Type_obj expected = (i == 0 || j == 0 || i == 4 || j == 4)
+                        ? Type_obj.Wall
+                        : Type_obj.FreeWay;
+                    Assert.AreEqual(expected, f[i, j].Obj, "клетка [" + i + "," + j + "]");
+                }
             }
-            set
+        }
+
+        [TestMethod]
+        public void Indexer_SetGetCell()
+        {
+            Field f = new Field(5, 5, 1, 1, 0, 0);
+            f[2, 2].Obj = Type_obj.Start;
+            Assert.AreEqual(Type_obj.Start, f[2, 2].Obj);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(IndexOutOfRangeException))]
+        public void Indexer_ThrowsWhenCellOutsideField()
+        {
+            Field f = new Field(5, 5, 1, 1, 0, 0);
+            var tmp = f[5, 0]; // индекс за последней допустимой границей
+        }
+
+        [TestMethod]
+        public void PaveWay_FindsShortestPath()
+        {
+            Way w = new Way(10, 10, 40, 40, 0, 0);
+            w[1, 1].Obj = Type_obj.Start;
+            w[3, 3].Obj = Type_obj.Finish;
+
+            var path = w.PaveWay();
+            Assert.IsNotNull(path, "путь должен быть найден");
+
+            // маршрут начинается на старте и заканчивается на финише
+            CollectionAssert.AreEqual(new[] { 1, 1 }, path[0]);
+            CollectionAssert.AreEqual(new[] { 3, 3 }, path[path.Count - 1]);
+
+            // соседние клетки маршрута стоят вплотную (без прыжков по диагонали)
+            for (int i = 1; i < path.Count; i++)
             {
-                testContextInstance = value;
+                int step = Math.Abs(path[i][0] - path[i - 1][0])
+                         + Math.Abs(path[i][1] - path[i - 1][1]);
+                Assert.AreEqual(1, step, "шаг " + i);
             }
+
+            // кратчайшее расстояние от (1,1) до (3,3) — 4 шага, т.е. 5 клеток
+            Assert.AreEqual(5, path.Count);
         }
 
-        #region Дополнительные атрибуты теста
-        // 
-        //При написании тестов можно использовать следующие дополнительные атрибуты:
-        //
-        //ClassInitialize используется для выполнения кода до запуска первого теста в классе
-        //[ClassInitialize()]
-        //public static void MyClassInitialize(TestContext testContext)
-        //{
-        //}
-        //
-        //ClassCleanup используется для выполнения кода после завершения работы всех тестов в классе
-        //[ClassCleanup()]
-        //public static void MyClassCleanup()
-        //{
-        //}
-        //
-        //TestInitialize используется для выполнения кода перед запуском каждого теста
-        //[TestInitialize()]
-        //public void MyTestInitialize()
-        //{
-        //}
-        //
-        //TestCleanup используется для выполнения кода после завершения каждого теста
-        //[TestCleanup()]
-        //public void MyTestCleanup()
-        //{
-        //}
-        //
-        #endregion
-
-
-        /// <summary>
-        ///Тест для Конструктор Field
-        ///</summary>
-        [TestMethod()]
-        [DeploymentItem("Search minimum way.exe")]
-        public void FieldConstructorTest()
+        [TestMethod]
+        public void PaveWay_ReturnsNullWhenNoPath()
         {
-            int n = 5; // TODO: инициализация подходящего значения
-            int m = 5; // TODO: инициализация подходящего значения
-            int w = 1; // TODO: инициализация подходящего значения
-            int h = 1; // TODO: инициализация подходящего значения
-            int x = 1; // TODO: инициализация подходящего значения
-            int y = 1; // TODO: инициализация подходящего значения
-            Field_Accessor target = new Field_Accessor(n, m, w, h, x, y);
-            Assert.Inconclusive("TODO: реализуйте код для проверки целевого объекта");
-        }
+            Way w = new Way(10, 10, 40, 40, 0, 0);
+            w[1, 1].Obj = Type_obj.Start;
+            w[3, 3].Obj = Type_obj.Finish;
+            // закрываем единственный выход от старта (остальные границы — уже стены)
+            w[2, 1].Obj = Type_obj.Wall;
+            w[1, 2].Obj = Type_obj.Wall;
 
-        /// <summary>
-        ///Тест для Конструктор Field
-        ///</summary>
-        [TestMethod()]
-        [DeploymentItem("Search minimum way.exe")]
-        public void FieldConstructorTest1()
-        {
-            Field_Accessor target = new Field_Accessor();
-            Assert.Inconclusive("TODO: реализуйте код для проверки целевого объекта");
-        }
-
-        /// <summary>
-        ///Тест для Item
-        ///</summary>
-        [TestMethod()]
-        [DeploymentItem("Search minimum way.exe")]
-        public void ItemTest()
-        {
-            Field_Accessor target = new Field_Accessor(5,5, 1,1, 1,1); // TODO: инициализация подходящего значения
-            int h = 2; // TODO: инициализация подходящего значения
-            int v = 2; // TODO: инициализация подходящего значения
-            int expected = 1; // TODO: инициализация подходящего значения
-            int actual;
-            
-            Assert.AreEqual(expected, actual);
-            //Assert.Inconclusive("Проверьте правильность этого метода теста.");
+            Assert.IsNull(w.PaveWay(), "пути быть не должно");
         }
     }
 }
