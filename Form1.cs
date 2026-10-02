@@ -1,214 +1,261 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Windows.Forms;
+﻿namespace Search_minimum_way;
 
-namespace Search_minimum_way
+public partial class Form1 : Form
 {
-    public partial class Form1 : Form
+    /// <summary>Инструмент, выбранный кнопками панели.</summary>
+    private enum Tool { None, Wall, Start, Finish, Erase }
+
+    private const int CellSizePx = 40;
+    private const int FieldWidth = 10;
+    private const int FieldHeight = 10;
+
+    private readonly Field _field = new(FieldWidth, FieldHeight, CellSizePx, CellSizePx);
+
+    private readonly Image _imgEmpty = Properties.Resources.Empty_Cells;
+    private readonly Image _imgWall = Properties.Resources.Wall;
+    private readonly Image _imgStart = Properties.Resources.Start;
+    private readonly Image _imgFinish = Properties.Resources.Finish;
+
+    // след, повёрнутый по направлению движения (исходная картинка смотрит вверх)
+    private readonly Image _trailUp = Properties.Resources.Trail;
+    private readonly Image _trailRight;
+    private readonly Image _trailDown;
+    private readonly Image _trailLeft;
+
+    private Tool _tool = Tool.None;
+    private bool _startPlaced;
+    private bool _finishPlaced;
+
+    private IReadOnlyList<Point>? _path; // найденный путь
+    private int _pathProgress;           // сколько клеток пути уже показано (анимация)
+
+    public Form1()
     {
+        InitializeComponent();
+        _trailRight = Rotated(_trailUp, RotateFlipType.Rotate90FlipNone);
+        _trailDown = Rotated(_trailUp, RotateFlipType.Rotate180FlipNone);
+        _trailLeft = Rotated(_trailUp, RotateFlipType.Rotate270FlipNone);
+        UpdateButtons();
+    }
 
-        Graphics Draw_Srfce; //создаём графическую поверхность поля
-        Way Field_Cells;
-        int Width_Cell;
-        int Height_Cell;
-        //Size s_Cell = new Size (Width_Cell, Height_Cell);
-        int u = 0;
-        // загрузка картинок 
-        Image im_em_cel = Image.FromFile(@"Icons\Empty_Cells.PNG");
-        Image im_wall = Image.FromFile(@"Icons\Wall.PNG");
-        Image im_start = Image.FromFile(@"Icons\Start.PNG");
-        Image im_finish = Image.FromFile(@"Icons\Finish.PNG");
-        Image im_trail = Image.FromFile(@"Icons\Trail.PNG");
-        /////////////////
+    protected override void OnPaint(PaintEventArgs e)
+    {
+        base.OnPaint(e);
+        DrawField(e.Graphics);
+        DrawPath(e.Graphics);
+    }
 
-        bool f_start = false; // установлен ли старт
-        bool f_finish = false;// установлен ли финиш
-        bool f_pove_way = false; // проложен ли путь
-        List <List<int>> ArrWay; // массив пути
+    protected override void OnFormClosed(FormClosedEventArgs e)
+    {
+        // клоны следов принадлежат форме, остальные картинки — общие ресурсы
+        _trailRight.Dispose();
+        _trailDown.Dispose();
+        _trailLeft.Dispose();
+        base.OnFormClosed(e);
+    }
 
-        public Form1()
+    private void DrawField(Graphics g)
+    {
+        for (int x = 0; x < _field.GetLength(0); x++)
         {
-            InitializeComponent();
-            Width_Cell = 40;
-            Height_Cell = 40;
-            Field_Cells = new Way(10, 10, Width_Cell, Height_Cell, 5, 5);
-                    
-        }
-
-
-        private void pictureBox1_Click(object sender, EventArgs e)
-        {
-
-        }
-
-        private void Form1_Load(object sender, EventArgs e)
-        {
-        }
-
-        protected override void OnPaint(PaintEventArgs e)
-        {
-            base.OnPaint(e);
-            u++;           
-            Draw_Srfce = e.Graphics;
-                Print_Field( e);
-                if (f_pove_way) Print_Way(e);
-        }
-
-        private void Print_Field( PaintEventArgs e)
-        {
-            Image tmp = im_em_cel;
-            Graphics g = e.Graphics;
-            for (int i = 0; i < Field_Cells.GetLength(0); i++)
-                for (int j = 0; j < Field_Cells.GetLength(1); j++)
-                {
-                    if (Field_Cells[i, j].Obj == Type_obj.FreeWay) tmp = im_em_cel;
-                    if (Field_Cells[i, j].Obj == Type_obj.Wall) tmp = im_wall;
-                    if (Field_Cells[i, j].Obj == Type_obj.Start) { tmp = im_start; label2.Text = Convert.ToString(u); }
-                    if (Field_Cells[i, j].Obj == Type_obj.Finish) tmp = im_finish;
-                    g.DrawImage(tmp, Field_Cells[i, j].Location);
-                }
-        }
-        private void Print_Way( PaintEventArgs e)
-        {                 
-            Graphics g = e.Graphics;
-
-            for (int i = 1; i < ArrWay.Count - 1; i++)
-                {
-                    g.DrawImage(Rotate_Im(i), Field_Cells[ArrWay[i][0], ArrWay[i][1]].Location);
-                    System.Threading.Thread.Sleep(100);
-                }
-            g.Dispose();
-            f_pove_way = false;
-        }
-        // Поворот следов в зависимости от следующей клетки
-        private Image Rotate_Im(int ind)
-        {
-            Image tmp = (Image)im_trail.Clone(); 
-            if(ArrWay[ind + 1][0] > ArrWay[ind][0])
-                tmp.RotateFlip(RotateFlipType.Rotate90FlipNone);
-            if (ArrWay[ind + 1][1] > ArrWay[ind][1])
-                tmp.RotateFlip(RotateFlipType.Rotate180FlipNone);
-            if (ArrWay[ind + 1][0] < ArrWay[ind][0])
-                tmp.RotateFlip(RotateFlipType.Rotate270FlipNone);
-            return tmp;
-        }
-        private void button1_Click(object sender, EventArgs e)
-        {
-            В_Wall.Enabled = false;
-            if(!f_finish) B_Finish.Enabled = true;
-            if (!f_start) B_Start.Enabled = true;
-            B_Delete.Enabled = true;
-        }
-
-        private void B_Start_Click(object sender, EventArgs e)
-        {
-            В_Wall.Enabled = true;
-            if (!f_finish) B_Finish.Enabled = true;
-            B_Start.Enabled = false;
-            B_Delete.Enabled = true;
-        }
-
-        private void B_Finish_Click(object sender, EventArgs e)
-        {
-            В_Wall.Enabled = true;
-            B_Finish.Enabled = false;
-            if (!f_start) B_Start.Enabled = true;
-            B_Delete.Enabled = true;
-        }
-
-        private void B_Delete_Click(object sender, EventArgs e)
-        {
-            В_Wall.Enabled = true;
-            if (!f_finish) B_Finish.Enabled = true;
-            if (!f_start) B_Start.Enabled = true;
-            B_Delete.Enabled = false;
-        }
-
-        private void Form1_MouseClick(object sender, MouseEventArgs e)
-        {
-            int x = (e.Location.X - Width_Cell) / Width_Cell;
-            int y = (e.Location.Y - Height_Cell) / Height_Cell;
-            label1.Text = Convert.ToString(x) + " " + Convert.ToString(y);
-            if ((x > 0 && x < Field_Cells.GetLength(0) - 1) && (y > 0 && y < Field_Cells.GetLength(1) - 1))
+            for (int y = 0; y < _field.GetLength(1); y++)
             {
+                Image image = _field[x, y].Type switch
+                {
+                    CellType.Wall => _imgWall,
+                    CellType.Start => _imgStart,
+                    CellType.Finish => _imgFinish,
+                    _ => _imgEmpty,
+                };
+                g.DrawImage(image, _field[x, y].Location);
+            }
+        }
+    }
 
-                if (В_Wall.Enabled == false)
-                {
-                    if (Field_Cells[x, y].Obj == Type_obj.Start)
-                    {
-                        f_start = false;
-                        B_Start.Enabled = true;
-                    }
-                    if (Field_Cells[x, y].Obj == Type_obj.Finish)
-                    {
-                        f_finish = false;
-                        B_Finish.Enabled = true;
-                    }
-                    Field_Cells[x, y].Obj = Type_obj.Wall;
-                }
-                else if (B_Start.Enabled == false && !f_start)
-                {
-                    if (Field_Cells[x, y].Obj == Type_obj.Finish)
-                    {
-                        f_finish = false;
-                        B_Finish.Enabled = true;
-                    }
-                    Field_Cells[x, y].Obj = Type_obj.Start;
-                    f_start = true;
+    private void DrawPath(Graphics g)
+    {
+        if (_path is null)
+            return;
+        for (int i = 1; i <= _pathProgress && i < _path.Count - 1; i++)
+        {
+            Image trail = TrailTowards(_path[i], _path[i + 1]);
+            g.DrawImage(trail, _field[_path[i].X, _path[i].Y].Location);
+        }
+    }
 
-                }
-                else if (B_Finish.Enabled == false && !f_finish)
-                {
-                    if (Field_Cells[x, y].Obj == Type_obj.Start)
-                    {
-                        f_start = false;
-                        B_Start.Enabled = true;
-                    }
-                    Field_Cells[x, y].Obj = Type_obj.Finish;
-                    f_finish = true;
-                }
-                else if (B_Delete.Enabled == false)
-                {
-                    if (Field_Cells[x, y].Obj == Type_obj.Start)
-                    {
-                        f_start = false;
-                        B_Start.Enabled = true;
-                    }
-                    if (Field_Cells[x, y].Obj == Type_obj.Finish)
-                    {
-                        f_finish = false;
-                        B_Finish.Enabled = true;
-                    }
-                    Field_Cells[x, y].Obj = Type_obj.FreeWay;                   
-                }
+    private Image TrailTowards(Point from, Point to)
+    {
+        if (to.X > from.X) return _trailRight;
+        if (to.X < from.X) return _trailLeft;
+        if (to.Y > from.Y) return _trailDown;
+        return _trailUp;
+    }
+
+    private static Image Rotated(Image source, RotateFlipType rotation)
+    {
+        var copy = (Image)source.Clone();
+        copy.RotateFlip(rotation);
+        return copy;
+    }
+
+    private void B_Wall_Click(object sender, EventArgs e) => SetTool(Tool.Wall);
+
+    private void B_Start_Click(object sender, EventArgs e) => SetTool(Tool.Start);
+
+    private void B_Finish_Click(object sender, EventArgs e) => SetTool(Tool.Finish);
+
+    private void B_Delete_Click(object sender, EventArgs e) => SetTool(Tool.Erase);
+
+    private void SetTool(Tool tool)
+    {
+        _tool = tool;
+        UpdateButtons();
+    }
+
+    private void UpdateButtons()
+    {
+        B_Wall.Enabled = _tool != Tool.Wall;
+        B_Start.Enabled = _tool != Tool.Start && !_startPlaced;
+        B_Finish.Enabled = _tool != Tool.Finish && !_finishPlaced;
+        B_Delete.Enabled = _tool != Tool.Erase;
+    }
+
+    private void Form1_MouseClick(object sender, MouseEventArgs e)
+    {
+        Point cellCoord = GetCellFromMouse(e.Location);
+        int x = cellCoord.X;
+        int y = cellCoord.Y;
+        CoordinatesLabel.Text = $"{x} {y}";
+
+        // клики по стене-рамке и за пределами поля игнорируем
+        if (x <= 0 || x >= _field.GetLength(0) - 1 || y <= 0 || y >= _field.GetLength(1) - 1)
+            return;
+
+        Cell cell = _field[x, y];
+        switch (_tool)
+        {
+            case Tool.Wall:
+                SetCellType(cell, CellType.Wall);
+                break;
+            case Tool.Start when !_startPlaced:
+                SetCellType(cell, CellType.Start);
+                break;
+            case Tool.Finish when !_finishPlaced:
+                SetCellType(cell, CellType.Finish);
+                break;
+            case Tool.Erase:
+                SetCellType(cell, CellType.FreeWay);
+                break;
+            default:
+                return; // инструмент не выбран — ничего не делаем
+        }
+
+        _path = null; // старый путь больше не актуален
+        UpdateButtons();
+        Invalidate();
+    }
+
+    /// <summary>
+    /// Преобразует координаты мыши в координаты клетки поля.
+    /// </summary>
+    private Point GetCellFromMouse(Point location)
+    {
+        int x = (location.X - CellSizePx) / CellSizePx;
+        int y = (location.Y - CellSizePx) / CellSizePx;
+        return new Point(x, y);
+    }
+
+    /// <summary>
+    /// Очищает всё поле, включая старт и финиш.
+    /// </summary>
+    private void ClearField()
+    {
+        for (int x = 1; x < _field.GetLength(0) - 1; x++)
+        {
+            for (int y = 1; y < _field.GetLength(1) - 1; y++)
+            {
+                Cell cell = _field[x, y];
+                if (cell.Type == CellType.Start) _startPlaced = false;
+                if (cell.Type == CellType.Finish) _finishPlaced = false;
+                cell.Type = CellType.FreeWay;
+            }
+        }
+        _path = null;
+        _pathProgress = 0;
+        UpdateButtons();
+        Invalidate();
+    }
+
+    private void SetCellType(Cell cell, CellType type)
+    {
+        // если клетка раньше была стартом или финишем — сбрасываем флаги
+        if (cell.Type == CellType.Start) _startPlaced = false;
+        if (cell.Type == CellType.Finish) _finishPlaced = false;
+
+        cell.Type = type;
+
+        if (type == CellType.Start) _startPlaced = true;
+        if (type == CellType.Finish) _finishPlaced = true;
+    }
+
+    private async void B_Go_Click(object sender, EventArgs e)
+    {
+        if (!_startPlaced || !_finishPlaced)
+        {
+            MessageBox.Show("Не установлен Старт или Финиш");
+            return;
+        }
+
+        IReadOnlyList<Point>? path = PathFinder.FindPath(_field);
+        if (path is null)
+        {
+            MessageBox.Show("Нет пути от Старта до Финиша");
+            return;
+        }
+
+        _path = path;
+        B_Go.Enabled = false;
+        try
+        {
+            // анимация прокладки пути без блокировки UI-потока
+            for (_pathProgress = 1; _pathProgress < path.Count - 1; _pathProgress++)
+            {
                 Invalidate();
-
+                await Task.Delay(100);
             }
+            // показываем длину пути после завершения анимации
+            MessageBox.Show($"Путь найден! Длина: {path.Count - 1} шагов", "Результат", 
+                MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
-
-       
-        
-
-        private void B_Go_Click(object sender, EventArgs e)
+        finally
         {
-            if (f_finish && f_start)
-            {
-                ArrWay = Field_Cells.PaveWay();
-                if(ArrWay != null)
-                    f_pove_way = true;
-                else
-                    MessageBox.Show("Нет пути от Старта до Финиша");
-            }
-            else MessageBox.Show("Не установлен Старт или Финиш");
-            Invalidate();
+            B_Go.Enabled = true;
         }
     }
 
-        
+    protected override void OnKeyDown(KeyEventArgs e)
+    {
+        base.OnKeyDown(e);
+        switch (e.KeyCode)
+        {
+            case Keys.W:
+                SetTool(Tool.Wall);
+                break;
+            case Keys.S:
+                SetTool(Tool.Start);
+                break;
+            case Keys.F:
+                SetTool(Tool.Finish);
+                break;
+            case Keys.E:
+                SetTool(Tool.Erase);
+                break;
+            case Keys.Delete:
+            case Keys.C:
+                ClearField();
+                break;
+        }
     }
 
+    private void B_Clear_Click(object sender, EventArgs e) => ClearField();
+}
